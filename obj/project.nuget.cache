@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "dgSpecHash": "6IggWAZstBM=",
+  "success": true,
+  "projectFilePath": "C:\\Studying\\7 semestras\\Kursinis Darbas\\Front-end\\Natak_Front-end\\Natak_Front-end.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\simas\\.nuget\\packages\\hexgridcontrol\\1.1.1\\hexgridcontrol.1.1.1.nupkg.sha512",
+    "C:\\Users\\simas\\.nuget\\packages\\restsharp\\112.1.0\\restsharp.112.1.0.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Package 'HexGridControl 1.1.1' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net8.0-windows7.0'. This package may not be fully compatible with your project.",
+      "libraryId": "HexGridControl",
+      "targetGraphs": [
+        "net8.0-windows7.0"
+      ]
+    }
+  ]
+}

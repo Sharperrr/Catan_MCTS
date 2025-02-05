@@ -1,0 +1,43 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "HexGridControl/1.1.1": {
+        "runtime": {
+          "lib/net40/HexGridControl.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "RestSharp/112.1.0": {
+        "runtime": {
+          "lib/net8.0/RestSharp.dll": {
+            "assemblyVersion": "112.1.0.0",
+            "fileVersion": "112.1.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "HexGridControl/1.1.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-/LbZ7CVavQ+mARXRBTgkr1dO1SrkxEIUFZDjdAhGiDjReskRVv0gHwVcMIsJK7ad7AoXfDEX7eHp2SSP79ql4g==",
+      "path": "hexgridcontrol/1.1.1",
+      "hashPath": "hexgridcontrol.1.1.1.nupkg.sha512"
+    },
+    "RestSharp/112.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-bOUGNZqhhv/QeCXHTKEUil846yBjwWXpzPKjO67kFvaAOoF361z7jLY5BMnuZ6WD2WQRA750sNMcK7MSPCQ5Mg==",
+      "path": "restsharp/112.1.0",
+      "hashPath": "restsharp.112.1.0.nupkg.sha512"
+    }
+  }
+}

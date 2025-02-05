@@ -1,0 +1,15 @@
+﻿<Window x:Class="Natak_Front_end.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Natak_Front_end"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Button Name="CreateGameButton" Content="Create Game" Width="200" Height="50" Click="OnCreateGameClick"/>
+            <TextBlock Name="GameIdText" Text="Game ID will appear here" TextAlignment="Center" Margin="10"/>
+        </StackPanel>
+    </Grid>
+</Window>
