@@ -40,7 +40,8 @@ namespace Natak_Front_end
         Play_card,
         Discard_resources,
         Move_thief,
-        Steal_resource
+        Steal_resource,
+        Buy_a_card
     }
 
     public enum ResourceType

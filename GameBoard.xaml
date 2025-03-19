@@ -18,6 +18,7 @@
                    Margin="10"
                    FontSize="12"
                    FontWeight="Bold"
+                   TextAlignment="Right"
                    Text="Game ID: Not Set" />
 
         <Canvas x:Name="GameBoardCanvas" Background="LightBlue" Width="700" Height="700"/>

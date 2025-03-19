@@ -32,44 +32,74 @@ namespace Natak_Front_end
             var request = new RestRequest("", Method.Post); // "" is the relative route if applicable
             request.AddJsonBody(new
             {
-                playerCount = 3,
+                playerCount = 4,
                 seed = 0
             });
 
-            try
+            int numberOfGames = 100; // Adjust the number of games
+            int successfulGames = 0;
+            int failedGames = 0;
+
+            for(int gameIndex = 0; gameIndex < numberOfGames; gameIndex++)
             {
-                // Send the POST request
-                var response = await _client.ExecuteAsync(request);
-
-                if (response.IsSuccessful)
+                GameManager.Instance.GameId = null;
+                try
                 {
-                    // Parse the response and display the Game ID
-                    var data = System.Text.Json.JsonSerializer.Deserialize<CreateGameResponse>(response.Content);
-                    GameManager.Instance.GameId = data?.gameId;
+                    // Send the POST request
+                    var response = await _client.ExecuteAsync(request);
 
-                    if (!string.IsNullOrEmpty(GameManager.Instance.GameId))
+                    if (response.IsSuccessful)
                     {
-                        // Navigate to the GameBoard window and pass the GameId
-                        var gameBoard = new GameBoard();
-                        gameBoard.Show();
+                        // Parse the response and display the Game ID
+                        var data = System.Text.Json.JsonSerializer.Deserialize<CreateGameResponse>(response.Content);
+                        GameManager.Instance.GameId = data?.gameId;
 
-                        // Optionally, close the MainWindow
-                        this.Close();
+                        if (!string.IsNullOrEmpty(GameManager.Instance.GameId))
+                        {
+                            // Navigate to the GameBoard window and pass the GameId
+                            var gameBoard = new GameBoard();
+                            gameBoard.Show();
+
+                            await gameBoard.gameCompletedSource.Task;
+
+                            successfulGames++;
+                            GameIdText.Text = $"Completed Games {successfulGames}/{numberOfGames} | Last Game ID: {data?.gameId}";
+
+                            // Optionally, close the MainWindow
+                            //this.Close();
+                        }
+                        else
+                        {
+                            GameIdText.Text = $"Game {gameIndex + 1}/{numberOfGames} failed: No Game ID received.";
+                            failedGames++;
+                        }
+
+                        //GameIdText.Text = $"Game ID: {data?.gameId}";
                     }
-
-                    GameIdText.Text = $"Game ID: {data?.gameId}";
+                    else
+                    {
+                        // Display an error message
+                        GameIdText.Text = $"Game {gameIndex + 1}/{numberOfGames} failed: {response.StatusCode}";
+                        failedGames++;
+                        
+                        //GameIdText.Text = $"Error: {response.StatusCode}";
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    // Display an error message
-                    GameIdText.Text = $"Error: {response.StatusCode}";
+                    // Handle any exceptions
+                    GameIdText.Text = $"Game {gameIndex + 1}/{numberOfGames} failed: {ex.Message}";
+                    failedGames++;
+
+                    MessageBox.Show($"Error: {ex.Message}", "Request Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-            catch (Exception ex)
-            {
-                // Handle any exceptions
-                MessageBox.Show($"Error: {ex.Message}", "Request Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            MessageBox.Show($"Simulation Complete: {successfulGames} games succeeded, {failedGames} games failed. Check logs for details.",
+                "Simulation Complete",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+
+
         }
     }
 

@@ -12,6 +12,7 @@
   <ItemGroup>
     <PackageReference Include="HexGridControl" Version="1.1.1" />
     <PackageReference Include="RestSharp" Version="112.1.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
   </ItemGroup>
 
 </Project>

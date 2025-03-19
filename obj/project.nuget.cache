@@ -1,11 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "6IggWAZstBM=",
+  "dgSpecHash": "R7wBDEZjdC8=",
   "success": true,
-  "projectFilePath": "C:\\Studying\\7 semestras\\Kursinis Darbas\\Front-end\\Natak_Front-end\\Natak_Front-end.csproj",
+  "projectFilePath": "C:\\Studying\\7 semestras\\Kursinis Darbas\\Front-end\\Natak_Front-end\\Catan_MCTS\\Natak_Front-end.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\simas\\.nuget\\packages\\hexgridcontrol\\1.1.1\\hexgridcontrol.1.1.1.nupkg.sha512",
-    "C:\\Users\\simas\\.nuget\\packages\\restsharp\\112.1.0\\restsharp.112.1.0.nupkg.sha512"
+    "C:\\Users\\simas\\.nuget\\packages\\restsharp\\112.1.0\\restsharp.112.1.0.nupkg.sha512",
+    "C:\\Users\\simas\\.nuget\\packages\\serilog\\4.0.0\\serilog.4.0.0.nupkg.sha512",
+    "C:\\Users\\simas\\.nuget\\packages\\serilog.sinks.file\\6.0.0\\serilog.sinks.file.6.0.0.nupkg.sha512"
   ],
   "logs": [
     {
