@@ -23,7 +23,7 @@ namespace Natak_Front_end
         Before_roll,
         After_roll,
         Build_roads,
-        Discard_resource,
+        Discard_resources,
         Move_thief,
         Steal_resource,
         Game_end

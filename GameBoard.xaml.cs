@@ -24,6 +24,7 @@ using System.IO;
 using System.Windows.Media.Effects;
 using System.Drawing;
 using System.Runtime.Intrinsics;
+using System.Reflection;
 
 namespace Natak_Front_end
 {
@@ -37,8 +38,13 @@ namespace Natak_Front_end
         private static readonly ILogger gameSummaryLogger;
         public readonly TaskCompletionSource<bool> gameCompletedSource = new TaskCompletionSource<bool>();
 
+        private string errorMsg = "";
+        private int discardLoopCounter = 0;
+        private const int DISCARD_LOOP_LIMIT = 20;
+
         public Game currentGame;
 
+        private DateTime gameStartTime;
         public int turns = 0;
 
         private static readonly Random random = new Random();
@@ -68,6 +74,13 @@ namespace Natak_Front_end
             { PlayerColour.Orange, Brushes.Orange },
             { PlayerColour.White, Brushes.White }
         };
+
+        private List<PlayerColour> PlayerOrder = new List<PlayerColour>();
+
+        private int redPoints = 0;
+        private int bluePoints = 0;
+        private int orangePoints = 0;
+        private int whitePoints = 0;
 
         static GameBoard()
         {
@@ -127,7 +140,7 @@ namespace Natak_Front_end
         {
             turns = 0;
             currentGame = null;
-            DateTime gameStartTime = DateTime.Now;
+            gameStartTime = DateTime.Now;
 
             //setup phase
             await FetchGameState(gameId);
@@ -184,10 +197,6 @@ namespace Natak_Front_end
 
             await PlaySetupPhase(gameId);
 
-            int redPoints = 0;
-            int bluePoints = 0;
-            int orangePoints = 0;
-            int whitePoints = 0;
             while (currentGame.gameState != GameState.Game_end)
             {
                 await PlayRandomTurn(gameId, currentGame.currentPlayerColour);
@@ -202,16 +211,33 @@ namespace Natak_Front_end
                 turns++;
                 if(turns == 2000)
                 {
+                    errorMsg = "Maximum game length exceded";
                     break;
                 }
             }
+            
+            await EndGame(gameId, errorMsg);
+        }
+
+        private async Task EndGame(string gameId, string error = "")
+        {
+            await LogEndGameResults(gameId, error);
+            gameCompletedSource.SetResult(true);
+            await Dispatcher.InvokeAsync(() =>
+            {
+                Close();
+            });
+        }
+
+        private async Task LogEndGameResults(string gameId, string error)
+        {
             int cardPoints = 0;
 
             await FetchGameState(gameId, (int)PlayerColour.Red);
             redPoints = currentGame.players[0].visibleVictoryPoints;
             int villagePoints = 5 - currentGame.player.remainingVillages;
             int townPoints = (4 - currentGame.player.remainingTowns) * 2;
-            if(currentGame.player.playableGrowthCards.ContainsKey(GrowthCardType.Victory_point))
+            if (currentGame.player.playableGrowthCards.ContainsKey(GrowthCardType.Victory_point))
                 cardPoints = currentGame.player.playableGrowthCards[GrowthCardType.Victory_point];
             int longestRoadPoints = currentGame.player.hasLongestRoad ? 2 : 0;
             int largestArmyPoints = currentGame.player.hasLargestArmy ? 2 : 0;
@@ -226,7 +252,7 @@ namespace Natak_Front_end
             longestRoadPoints = currentGame.player.hasLongestRoad ? 2 : 0;
             largestArmyPoints = currentGame.player.hasLargestArmy ? 2 : 0;
             string blueDetailedPoints = "Villages: " + villagePoints + ", Towns: " + townPoints + ", Cards: " + cardPoints + ", Longest road: " + longestRoadPoints + ", Largest Army: " + largestArmyPoints;
-            
+
             await FetchGameState(gameId, (int)PlayerColour.Orange);
             orangePoints = currentGame.players[2].visibleVictoryPoints;
             villagePoints = 5 - currentGame.player.remainingVillages;
@@ -250,11 +276,18 @@ namespace Natak_Front_end
             DateTime gameEndTime = DateTime.Now;
             double durationSeconds = (gameEndTime - gameStartTime).TotalSeconds;
 
+            PlayerColour? winner = currentGame.winner;
+
             gameSummaryLogger.Information(
-                "{GameId},{DurationSeconds},{RoundCount},{RedPoints},{BluePoints},{OrangePoints},{WhitePoints},{RedDetailedPoints},{BlueDetailedPoints},{OrangeDetailedPoints},{WhiteDetailedPoints}",
+                "{GameId},{DurationSeconds},{RoundCount},{Player1},{Player2},{Player3},{Player4},{Winner},{RedPoints},{BluePoints},{OrangePoints},{WhitePoints},{RedDetailedPoints},{BlueDetailedPoints},{OrangeDetailedPoints},{WhiteDetailedPoints},{ErrorMessage}",
                 gameId,
                 durationSeconds,
                 turns / 4,
+                PlayerOrder[0],
+                PlayerOrder[1],
+                PlayerOrder[2],
+                PlayerOrder[3],
+                winner,
                 redPoints,
                 bluePoints,
                 orangePoints,
@@ -262,19 +295,34 @@ namespace Natak_Front_end
                 redDetailedPoints,
                 blueDetailedPoints,
                 orangeDetailedPoints,
-                whiteDetailedPoints
+                whiteDetailedPoints,
+                error
             );
 
-            GameIdText.Text = $"{currentGame.winner} won! | Turns: {turns / 4} | Game ID: {gameId}\nRed points: {redPoints}\nBlue points: {bluePoints}\nOrange points: {orangePoints}\nWhite points: {whitePoints}";
-
-            gameCompletedSource.SetResult(true);
-            Dispatcher.Invoke(() => Close());
         }
+
+/*        private async Task GetPlayerPoints(string gameId, PlayerColour player)
+        {
+            await FetchGameState(gameId, (int)PlayerColour.Red);
+            redPoints = currentGame.players[0].visibleVictoryPoints;
+            int villagePoints = 5 - currentGame.player.remainingVillages;
+            int townPoints = (4 - currentGame.player.remainingTowns) * 2;
+            if (currentGame.player.playableGrowthCards.ContainsKey(GrowthCardType.Victory_point))
+                cardPoints = currentGame.player.playableGrowthCards[GrowthCardType.Victory_point];
+            int longestRoadPoints = currentGame.player.hasLongestRoad ? 2 : 0;
+            int largestArmyPoints = currentGame.player.hasLargestArmy ? 2 : 0;
+            string redDetailedPoints = "Villages: " + villagePoints + ", Towns: " + townPoints + ", Cards: " + cardPoints + ", Longest road: " + longestRoadPoints + ", Largest Army: " + largestArmyPoints;
+
+        }*/
 
         private async Task PlaySetupPhase(string gameId)
         {
             while (currentGame.gameState == GameState.Setup_village)
             {
+                if(PlayerOrder.Count != 4)
+                {
+                    PlayerOrder.Add(currentGame.currentPlayerColour);
+                }
                 await GetAvailableVillageLocations(gameId);
 
                 if (availableVillageLocations != null && availableVillageLocations.Count > 0)
@@ -319,6 +367,8 @@ namespace Natak_Front_end
             List<ActionType> actions = new List<ActionType>(currentGame.actions);
             actions.Add(ActionType.Buy_a_card);
 
+            discardLoopCounter = 0;
+
             await GetAvailableVillageLocations(gameId);
             await GetAvailableRoadLocations(gameId);
             await GetAvailableTownLocations(gameId);
@@ -329,6 +379,7 @@ namespace Natak_Front_end
                 {
                     break;
                 }
+
                 int randomIndex = random.Next(actions.Count);
                 ActionType selectedAction = actions[randomIndex];
 
@@ -743,6 +794,15 @@ namespace Natak_Front_end
                             }
                             else
                             {
+                                discardLoopCounter++;
+
+                                if (discardLoopCounter > DISCARD_LOOP_LIMIT)
+                                {
+                                    currentGame.gameState = GameState.Game_end;
+                                    errorMsg = "Discard bug";
+                                    return;
+                                }
+
                                 Dictionary<ResourceType, int> availableResources = new Dictionary<ResourceType, int>(currentGame.player.resourceCards);
                                 Dictionary<ResourceType, int> resourcesToDiscard = new Dictionary<ResourceType, int>();
                                 int cardsToDiscard = currentGame.player.cardsToDiscard;
@@ -817,7 +877,8 @@ namespace Natak_Front_end
                     // Update the UI with the game state
                     if (game != null)
                     {
-                        currentGame = (Game)game.Clone();
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
                     }
                 }
                 else
@@ -965,7 +1026,7 @@ namespace Natak_Front_end
             var requestBody = new BuildingRequest { point = point };
 
             // Create the POST request
-            var request = new RestRequest($"{gameId}/build/village", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/build/village", Method.Post);
 
             // Add the request body
             request.AddJsonBody(requestBody);
@@ -976,8 +1037,8 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    string logResources = string.Join(", ", currentGame.player.resourceCards.Select(r => $"{r.Key}: {r.Value}"));
-                    LogBuildAction(turns, currentGame.currentPlayerColour, "Village", true, "", availableVillageLocations.Count, currentGame.player.remainingVillages, logResources);
+                    //string logResources = string.Join(", ", currentGame.player.resourceCards.Select(r => $"{r.Key}: {r.Value}"));
+                    //LogBuildAction(turns, currentGame.currentPlayerColour, "Village", true, "", availableVillageLocations.Count, currentGame.player.remainingVillages, logResources);
 
                     double vOffset = 0;
                     if (point.y % 2 == 0)
@@ -1005,7 +1066,15 @@ namespace Natak_Front_end
                         DrawVillage(HorizontalSpacing * (0.5 + point.x * 0.5), VerticalSpacing * (1.75 + (point.y - 1) / 2 * 1.5 + vOffset) - VillageSize, VillageSize, GamePieceColours[currentGame.currentPlayerColour]);
                     }
 
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                     await GetAvailableVillageLocations(gameId);
                 }
                 else
@@ -1025,7 +1094,7 @@ namespace Natak_Front_end
             var requestBody = new BuildingRequest { point = point };
 
             // Create the POST request
-            var request = new RestRequest($"{gameId}/build/town", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/build/town", Method.Post);
 
             // Add the request body
             request.AddJsonBody(requestBody);
@@ -1036,8 +1105,8 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    string logResources = string.Join(", ", currentGame.player.resourceCards.Select(r => $"{r.Key}: {r.Value}"));
-                    LogBuildAction(turns, currentGame.currentPlayerColour, "Town", true, "", availableTownLocations.Count, currentGame.player.remainingTowns, logResources);
+                    //string logResources = string.Join(", ", currentGame.player.resourceCards.Select(r => $"{r.Key}: {r.Value}"));
+                    //LogBuildAction(turns, currentGame.currentPlayerColour, "Town", true, "", availableTownLocations.Count, currentGame.player.remainingTowns, logResources);
 
                     double vOffset = 0;
                     if (point.y % 2 == 0)
@@ -1065,7 +1134,15 @@ namespace Natak_Front_end
                         DrawTown(HorizontalSpacing * (0.5 + point.x * 0.5), VerticalSpacing * (1.75 + (point.y - 1) / 2 * 1.5 + vOffset) - VillageSize * 2, VillageSize, GamePieceColours[currentGame.currentPlayerColour]);
                     }
 
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                     await GetAvailableTownLocations(gameId);
                 }
                 else
@@ -1085,7 +1162,7 @@ namespace Natak_Front_end
             var requestBody = new RoadBuildRequest { firstPoint = point1, secondPoint = point2 };
 
             // Create the POST request
-            var request = new RestRequest($"{gameId}/build/road", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/build/road", Method.Post);
 
             // Add the request body
             request.AddJsonBody(requestBody);
@@ -1096,14 +1173,22 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    string logResources = string.Join(", ", currentGame.player.resourceCards.Select(r => $"{r.Key}: {r.Value}"));
-                    LogBuildAction(turns, currentGame.currentPlayerColour, "Road", true, "", availableRoadLocations.Count, currentGame.player.remainingRoads, logResources);
+                    //string logResources = string.Join(", ", currentGame.player.resourceCards.Select(r => $"{r.Key}: {r.Value}"));
+                    //LogBuildAction(turns, currentGame.currentPlayerColour, "Road", true, "", availableRoadLocations.Count, currentGame.player.remainingRoads, logResources);
 
                     double x, y;
                     (x, y) = CalculateRoadCoordinates(point1.x, point2.x, point1.y, point2.y);
                     DrawRoad(x, y, RoadSize, GamePieceColours[currentGame.currentPlayerColour]);
 
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                     await GetAvailableRoadLocations(gameId);
                 }
                 else
@@ -1120,7 +1205,7 @@ namespace Natak_Front_end
         private async Task RollDice(string gameId)
         {
             // Create the POST request
-            var request = new RestRequest($"{gameId}/roll", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/roll", Method.Post);
 
             try
             {
@@ -1128,7 +1213,14 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                 }
                 else
                 {
@@ -1144,7 +1236,7 @@ namespace Natak_Front_end
         private async Task EndTurn(string gameId)
         {
             // Create the POST request
-            var request = new RestRequest($"{gameId}/end-turn", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/end-turn", Method.Post);
 
             try
             {
@@ -1152,7 +1244,15 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                 }
                 else
                 {
@@ -1168,7 +1268,7 @@ namespace Natak_Front_end
         private async Task BuyGrowthCard(string gameId)
         {
             // Create the POST request
-            var request = new RestRequest($"{gameId}/buy/growth-card", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/buy/growth-card", Method.Post);
 
             try
             {
@@ -1176,7 +1276,15 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                 }
                 else
                 {
@@ -1194,8 +1302,6 @@ namespace Natak_Front_end
             // Define the request body
             var requestBody = new DiscardRequest { resources = resourcesToDiscard };
 
-            var testrequest = $"{gameId}/{(int)player}/discard-resources";
-
             // Create the POST request
             var request = new RestRequest($"{gameId}/{(int)player}/discard-resources", Method.Post);
 
@@ -1208,17 +1314,25 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                 }
                 else
                 {
-                    MessageBox.Show($"Failed to discard resources. Status: {response.StatusCode}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    MessageBox.Show($"else - Failed to discard resources. Status: {response.StatusCode}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    //await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error failed to discard resources: {ex.Message}", "Request Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"catch - Error failed to discard resources: {ex.Message}", "Request Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1228,7 +1342,7 @@ namespace Natak_Front_end
             var requestBody = new MoveThiefRequest { moveThiefTo = point };
 
             // Create the POST request
-            var request = new RestRequest($"{gameId}/move-thief", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/move-thief", Method.Post);
 
             // Add the request body
             request.AddJsonBody(requestBody);
@@ -1261,7 +1375,16 @@ namespace Natak_Front_end
                     {
                         DrawThiefIndicator(HorizontalSpacing * (point.x + rowOffset) + oddOffset, VerticalSpacing * (1 + point.y * 0.75));
                     }
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                 }
                 else
                 {
@@ -1280,7 +1403,7 @@ namespace Natak_Front_end
             var requestBody = new StealResourceRequest { victimColour = (int)playerToStealFrom };
 
             // Create the POST request
-            var request = new RestRequest($"{gameId}/steal-resource", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/steal-resource", Method.Post);
 
             // Add the request body
             request.AddJsonBody(requestBody);
@@ -1291,11 +1414,19 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                 }
                 else
                 {
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    //await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
                     //MessageBox.Show($"Failed to steal a resource. Status: {response.StatusCode}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
@@ -1311,7 +1442,7 @@ namespace Natak_Front_end
             var requestBody = new BankTradeRequest { resourceToGive = sell, resourceToGet = buy };
 
             // Create the POST request
-            var request = new RestRequest($"{gameId}/trade/bank", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/trade/bank", Method.Post);
 
             // Add the request body
             request.AddJsonBody(requestBody);
@@ -1322,7 +1453,15 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                 }
                 else
                 {
@@ -1338,7 +1477,7 @@ namespace Natak_Front_end
         private async Task PlaySoldierCard(string gameId)
         {
             // Create the POST request
-            var request = new RestRequest($"{gameId}/play-growth-card/soldier", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/play-growth-card/soldier", Method.Post);
 
             try
             {
@@ -1346,7 +1485,15 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                 }
                 else
                 {
@@ -1362,7 +1509,7 @@ namespace Natak_Front_end
         private async Task PlayRoamingCard(string gameId)
         {
             // Create the POST request
-            var request = new RestRequest($"{gameId}/play-growth-card/roaming", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/play-growth-card/roaming", Method.Post);
 
             try
             {
@@ -1370,7 +1517,15 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                 }
                 else
                 {
@@ -1389,7 +1544,7 @@ namespace Natak_Front_end
             var requestBody = new WealthCardRequest { firstResource = resource1, secondResource = resource2 };
 
             // Create the POST request
-            var request = new RestRequest($"{gameId}/play-growth-card/wealth", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/play-growth-card/wealth", Method.Post);
 
             // Add the request body
             request.AddJsonBody(requestBody);
@@ -1400,7 +1555,15 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                 }
                 else
                 {
@@ -1419,7 +1582,7 @@ namespace Natak_Front_end
             var requestBody = new GathererCardRequest { resource = resource };
 
             // Create the POST request
-            var request = new RestRequest($"{gameId}/play-growth-card/gatherer", Method.Post);
+            var request = new RestRequest($"{gameId}/{(int)currentGame.currentPlayerColour}/play-growth-card/gatherer", Method.Post);
 
             // Add the request body
             request.AddJsonBody(requestBody);
@@ -1430,7 +1593,15 @@ namespace Natak_Front_end
 
                 if (response.IsSuccessful)
                 {
-                    await FetchGameState(gameId, (int)currentGame.currentPlayerColour);
+                    // Deserialize response into a meaningful structure
+                    var game = JsonSerializer.Deserialize<Game>(response.Content);
+
+                    // Update the UI with the game state
+                    if (game != null)
+                    {
+                        //currentGame = (Game)game.Clone();
+                        currentGame = game;
+                    }
                 }
                 else
                 {
