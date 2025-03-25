@@ -1,0 +1,64 @@
+# Ignore build output
+bin/
+obj/
+
+# Ignore user-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Ignore Visual Studio folders
+.vs/
+.vscode/
+
+# Ignore logs and diagnostics
+Logs/
+*.log
+
+# Ignore test results
+TestResults/
+
+# Ignore compiled binaries and related files
+*.dll
+*.exe
+*.pdb
+*.cache
+*.ilk
+*.lib
+
+# Ignore database files
+*.mdf
+*.ldf
+*.ndf
+
+# Ignore temporary files
+*.tmp
+*.bak
+*.old
+
+# Ignore NuGet packages
+packages/
+*.nupkg
+project.lock.json
+project.assets.json
+
+# Ignore ReSharper files
+_ReSharper*/
+*.DotSettings.user
+
+# Ignore Rider files
+.idea/
+
+# Ignore JetBrains IDE configs
+*.sln.iml
+
+# Ignore Mac system files (if ever zipped or moved around)
+.DS_Store
+
+# Ignore Windows thumbnail cache
+Thumbs.db
+
+# Ignore compiled XAML files
+*.g.cs
+*.g.i.cs
