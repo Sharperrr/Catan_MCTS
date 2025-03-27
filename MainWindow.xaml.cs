@@ -8,7 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-
+using Natak_Front_end.Services;
 using RestSharp;
 
 namespace Natak_Front_end
@@ -18,24 +18,16 @@ namespace Natak_Front_end
     /// </summary>
     public partial class MainWindow : Window
     {
-        private readonly RestClient _client;
+        private readonly ApiService _apiService;
         public MainWindow()
         {
             InitializeComponent();
-            // Base URL of the API
-            _client = new RestClient("https://localhost:7207/api/v1/natak/");
+            _apiService = new ApiService();
+
         }
 
         private async void OnCreateGameClick(object sender, RoutedEventArgs e)
         {
-            // Define the request
-            var request = new RestRequest("", Method.Post); // "" is the relative route if applicable
-            request.AddJsonBody(new
-            {
-                playerCount = 4,
-                seed = 0
-            });
-
             int numberOfGames = 100; // Adjust the number of games
             int successfulGames = 0;
             int failedGames = 0;
@@ -46,43 +38,23 @@ namespace Natak_Front_end
                 try
                 {
                     // Send the POST request
-                    var response = await _client.ExecuteAsync(request);
+                    var response = await _apiService.CreateGame(4, 0);
+                    GameManager.Instance.GameId = response?.gameId;
 
-                    if (response.IsSuccessful)
+                    if (!string.IsNullOrEmpty(GameManager.Instance.GameId))
                     {
-                        // Parse the response and display the Game ID
-                        var data = System.Text.Json.JsonSerializer.Deserialize<CreateGameResponse>(response.Content);
-                        GameManager.Instance.GameId = data?.gameId;
+                        var gameBoard = new GameBoard();
+                        gameBoard.Show();
 
-                        if (!string.IsNullOrEmpty(GameManager.Instance.GameId))
-                        {
-                            // Navigate to the GameBoard window and pass the GameId
-                            var gameBoard = new GameBoard();
-                            gameBoard.Show();
+                        await gameBoard.gameCompletedSource.Task;
 
-                            await gameBoard.gameCompletedSource.Task;
-
-                            successfulGames++;
-                            GameIdText.Text = $"Completed Games {successfulGames}/{numberOfGames} | Last Game ID: {data?.gameId}";
-
-                            // Optionally, close the MainWindow
-                            //this.Close();
-                        }
-                        else
-                        {
-                            GameIdText.Text = $"Game {gameIndex + 1}/{numberOfGames} failed: No Game ID received.";
-                            failedGames++;
-                        }
-
-                        //GameIdText.Text = $"Game ID: {data?.gameId}";
+                        successfulGames++;
+                        GameIdText.Text = $"Completed Games {successfulGames}/{numberOfGames} | Last Game ID: {response?.gameId}";
                     }
                     else
                     {
-                        // Display an error message
-                        GameIdText.Text = $"Game {gameIndex + 1}/{numberOfGames} failed: {response.StatusCode}";
+                        GameIdText.Text = $"Game {gameIndex + 1}/{numberOfGames} failed: No Game ID received.";
                         failedGames++;
-                        
-                        //GameIdText.Text = $"Error: {response.StatusCode}";
                     }
                 }
                 catch (Exception ex)
