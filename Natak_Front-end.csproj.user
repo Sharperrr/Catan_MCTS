@@ -7,15 +7,15 @@
     </ApplicationDefinition>
   </ItemGroup>
   <ItemGroup>
-    <Compile Update="GameBoard.xaml.cs">
+    <Compile Update="UI\GameBoard.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Page Update="GameBoard.xaml">
+    <Page Update="UI\GameBoard.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Update="MainWindow.xaml">
+    <Page Update="UI\MainWindow.xaml">
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>

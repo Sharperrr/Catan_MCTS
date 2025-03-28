@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Natak_Front_end
+namespace Natak_Front_end.Core
 {
     public class GameManager
     {
