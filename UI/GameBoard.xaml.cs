@@ -39,12 +39,12 @@ namespace Natak_Front_end
             { PlayerColour.White, Brushes.White }
         };
 
-        public GameBoard()
+        public GameBoard(int playerCount)
         {
             InitializeComponent();
             _apiService = new ApiService();
             var gameId = GameManager.Instance.GameId;
-            _gameController = new GameController(_apiService, gameId);
+            _gameController = new GameController(_apiService, gameId, playerCount);
 
             GameIdText.Text = $"Game ID: {gameId}";
 
@@ -78,7 +78,7 @@ namespace Natak_Front_end
             catch (Exception ex)
             {
                 MessageBox.Show($"Error during game: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                gameCompletedSource.SetResult(true);
+                //gameCompletedSource.SetResult(true);
                 await Dispatcher.InvokeAsync(() => Close());
             }
         }

@@ -28,6 +28,7 @@ namespace Natak_Front_end.Controllers
 
         private Models.Point? currentThiefLocation = null;
 
+        private int PlayerCount;
         private List<PlayerColour> PlayerOrder = new List<PlayerColour>();
 
         private int redPoints = 0;
@@ -58,10 +59,11 @@ namespace Natak_Front_end.Controllers
             gameSummaryLogger.Information("GameId,Duration(s),Rounds,P1colour,P2colour,P3colour,P4colour,Winner,RedPoints,BluePoints,OrangePoints,WhitePoints,RedDetailedPoints,BlueDetailedPoints,OrangeDetailedPoints,WhiteDetailedPoints,ErrorMessage");
         }
 
-        public GameController(ApiService apiService, string gameId)
+        public GameController(ApiService apiService, string gameId, int playerCount)
         {
             _apiService = apiService ?? throw new ArgumentNullException(nameof(apiService));
             this.gameId = gameId ?? throw new ArgumentNullException(nameof(gameId));
+            PlayerCount = playerCount;
 
             /*Log.Logger = new LoggerConfiguration()
                 .WriteTo.File(
@@ -75,7 +77,7 @@ namespace Natak_Front_end.Controllers
 
             playerAgents = new Dictionary<PlayerColour, IAgent>
             {
-                { PlayerColour.Red, new RandomAgent(_apiService, gameId) },
+                { PlayerColour.Red, new MCTSAgent(_apiService, gameId) },
                 { PlayerColour.Blue, new RandomAgent(_apiService, gameId) },
                 { PlayerColour.Orange, new RandomAgent(_apiService, gameId) },
                 { PlayerColour.White, new RandomAgent(_apiService, gameId) }
@@ -136,13 +138,21 @@ namespace Natak_Front_end.Controllers
                     currentGame = await _apiService.FetchGameState(gameId, (int)currentGame.currentPlayerColour);
                 }
 
-                if (turns % 40 == 0)
+                if (turns == 90)
+                {
+                    Console.WriteLine("Break time");
+                }
+
+                if (turns % PlayerCount == 0)
                 {
                     redPoints = currentGame.players[0].visibleVictoryPoints;
                     bluePoints = currentGame.players[1].visibleVictoryPoints;
                     orangePoints = currentGame.players[2].visibleVictoryPoints;
-                    whitePoints = currentGame.players[3].visibleVictoryPoints;
-                    GameStateUpdated?.Invoke($"{currentGame.currentPlayerColour} Player's turn | Round: {turns / 4} | Game ID: {gameId}\nRed points: {redPoints}\nBlue points: {bluePoints}\nOrange points: {orangePoints}\nWhite points: {whitePoints}");
+                    if(PlayerCount == 4)
+                    {
+                        whitePoints = currentGame.players[3].visibleVictoryPoints;
+                    }
+                    GameStateUpdated?.Invoke($"{currentGame.currentPlayerColour} Player's turn | Round: {turns / PlayerCount} | Game ID: {gameId}\nRed points: {redPoints}\nBlue points: {bluePoints}\nOrange points: {orangePoints}\nWhite points: {whitePoints}");
                 }
                 turns++;
                 if (turns == 2000)
@@ -159,7 +169,7 @@ namespace Natak_Front_end.Controllers
         {
             while (currentGame.gameState == GameState.Setup_village)
             {
-                if (PlayerOrder.Count != 4)
+                if (PlayerOrder.Count != PlayerCount)
                 {
                     PlayerOrder.Add(currentGame.currentPlayerColour);
                 }
@@ -261,30 +271,51 @@ namespace Natak_Front_end.Controllers
             largestArmyPoints = currentGame.player.hasLargestArmy ? 2 : 0;
             string orangeDetailedPoints = "Villages: " + villagePoints + ", Towns: " + townPoints + ", Cards: " + cardPoints + ", Longest road: " + longestRoadPoints + ", Largest Army: " + largestArmyPoints;
 
-            currentGame = await _apiService.FetchGameState(gameId, (int)PlayerColour.White);
-            whitePoints = currentGame.players[3].visibleVictoryPoints;
-            villagePoints = 5 - currentGame.player.remainingVillages;
-            townPoints = (4 - currentGame.player.remainingTowns) * 2;
-            if (currentGame.player.playableGrowthCards.ContainsKey(GrowthCardType.Victory_point))
-                cardPoints = currentGame.player.playableGrowthCards[GrowthCardType.Victory_point];
-            longestRoadPoints = currentGame.player.hasLongestRoad ? 2 : 0;
-            largestArmyPoints = currentGame.player.hasLargestArmy ? 2 : 0;
+            if (PlayerCount == 4)
+            {
+                currentGame = await _apiService.FetchGameState(gameId, (int)PlayerColour.White);
+                whitePoints = currentGame.players[3].visibleVictoryPoints;
+                villagePoints = 5 - currentGame.player.remainingVillages;
+                townPoints = (4 - currentGame.player.remainingTowns) * 2;
+                if (currentGame.player.playableGrowthCards.ContainsKey(GrowthCardType.Victory_point))
+                    cardPoints = currentGame.player.playableGrowthCards[GrowthCardType.Victory_point];
+                longestRoadPoints = currentGame.player.hasLongestRoad ? 2 : 0;
+                largestArmyPoints = currentGame.player.hasLargestArmy ? 2 : 0;
+            }
+            else
+            {
+                whitePoints = 0;
+                villagePoints = 0;
+                townPoints = 0;
+                cardPoints = 0;
+                longestRoadPoints = 0;
+                largestArmyPoints = 0;
+            }
             string whiteDetailedPoints = "Villages: " + villagePoints + ", Towns: " + townPoints + ", Cards: " + cardPoints + ", Longest road: " + longestRoadPoints + ", Largest Army: " + largestArmyPoints;
 
             DateTime gameEndTime = DateTime.Now;
             double durationSeconds = (gameEndTime - gameStartTime).TotalSeconds;
 
             PlayerColour? winner = currentGame.winner;
+            PlayerColour p4;
+            if (PlayerCount == 4)
+            {
+                p4 = PlayerOrder[3];
+            }
+            else
+            {
+                p4 = PlayerColour.no_colour;
+            }
 
             gameSummaryLogger.Information(
                 "{GameId},{DurationSeconds},{RoundCount},{Player1},{Player2},{Player3},{Player4},{Winner},{RedPoints},{BluePoints},{OrangePoints},{WhitePoints},{RedDetailedPoints},{BlueDetailedPoints},{OrangeDetailedPoints},{WhiteDetailedPoints},{ErrorMessage}",
                 gameId,
                 durationSeconds,
-                turns / 4,
+                turns / PlayerCount,
                 PlayerOrder[0],
                 PlayerOrder[1],
                 PlayerOrder[2],
-                PlayerOrder[3],
+                p4,
                 winner,
                 redPoints,
                 bluePoints,
