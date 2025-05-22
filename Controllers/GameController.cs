@@ -50,7 +50,7 @@ namespace Natak_Front_end.Controllers
         {
             gameSummaryLogger = new LoggerConfiguration()
                 .WriteTo.File(
-                    @"C:\Studying\7 semestras\Kursinis Darbas\Front-end\Natak_Front-end\Catan_MCTS\Logs\game_summaries.csv",
+                    @"C:\some_folder\Logs\game_summaries.csv",
                     outputTemplate: "{Message}{NewLine}",
                     rollingInterval: RollingInterval.Infinite // Keep one file for all games
                 )
@@ -67,7 +67,7 @@ namespace Natak_Front_end.Controllers
 
             /*Log.Logger = new LoggerConfiguration()
                 .WriteTo.File(
-                    @"C:\Studying\7 semestras\Kursinis Darbas\Front-end\Natak_Front-end\Catan_MCTS\Logs\build_logs.csv",
+                    @"C:\some_folder\Logs\build_logs.csv",
                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff},{Message}{NewLine}",
                     rollingInterval: RollingInterval.Day
                 )
