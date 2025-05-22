@@ -63,6 +63,12 @@ namespace Natak_Front_end.Services
             return await ExecuteRequestAsync<Game>(request);
         }
 
+        public async Task<Game> SaveLoad(string gameId, bool isSaved)
+        {
+            var request = new RestRequest($"{gameId}/{isSaved}/save-load", Method.Post);
+            return await ExecuteRequestAsync<Game>(request);
+        }
+
         public async Task<Game> RollDice(string gameId, int player)
         {
             var request = new RestRequest($"{gameId}/{player}/roll", Method.Post);
@@ -150,6 +156,13 @@ namespace Natak_Front_end.Services
                 var response = await _restClient.ExecuteAsync(request);
                 if (response.IsSuccessful)
                 {
+                    if (string.IsNullOrWhiteSpace(response.Content))
+                    {
+                        // If content is empty, and T is a reference type, return default(T) (which is null for reference types)
+                        // Or, if T is a struct/value type, it will be its default value.
+                        // You might want to handle this more specifically based on what SaveLoad is expected to return.
+                        return default(T);
+                    }
                     return JsonSerializer.Deserialize<T>(response.Content);
                 }
                 else

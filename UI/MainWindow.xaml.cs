@@ -20,6 +20,8 @@ namespace Natak_Front_end
     public partial class MainWindow : Window
     {
         private readonly ApiService _apiService;
+
+        private int playerCount = 3;
         public MainWindow()
         {
             InitializeComponent();
@@ -29,7 +31,7 @@ namespace Natak_Front_end
 
         private async void OnCreateGameClick(object sender, RoutedEventArgs e)
         {
-            int numberOfGames = 100; // Adjust the number of games
+            int numberOfGames = 25; // Adjust the number of games
             int successfulGames = 0;
             int failedGames = 0;
 
@@ -39,12 +41,12 @@ namespace Natak_Front_end
                 try
                 {
                     // Send the POST request
-                    var response = await _apiService.CreateGame(4, 0);
+                    var response = await _apiService.CreateGame(playerCount, 0);
                     GameManager.Instance.GameId = response?.gameId;
 
                     if (!string.IsNullOrEmpty(GameManager.Instance.GameId))
                     {
-                        var gameBoard = new GameBoard();
+                        var gameBoard = new GameBoard(playerCount);
                         gameBoard.Show();
 
                         await gameBoard.gameCompletedSource.Task;

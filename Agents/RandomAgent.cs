@@ -10,6 +10,7 @@ using System.Numerics;
 using Serilog;
 using Natak_Front_end.Controllers;
 using System.Windows;
+using Natak_Front_end.Utils;
 
 namespace Natak_Front_end.Agents
 {
@@ -65,9 +66,9 @@ namespace Natak_Front_end.Agents
             _currentThiefLocation = thiefLocation;
             bool isTurnOver = false;
             bool hasPlayedCard = false;
+            //int roamingCardPlayed = 0;
             _currentGame = await _apiService.FetchGameState(gameId, (int)playerColour);
             List<ActionType> actions = new List<ActionType>(_currentGame.actions);
-            actions.Add(ActionType.Buy_a_card);
 
             _discardLoopCounter = 0;
 
@@ -82,8 +83,20 @@ namespace Natak_Front_end.Agents
                     break;
                 }
 
-                int randomIndex = _random.Next(actions.Count);
-                ActionType selectedAction = actions[randomIndex];
+
+                ActionType selectedAction;
+                int randomIndex = 0;
+
+                if (!actions.Any())
+                {
+                    actions = new List<ActionType>(_currentGame.actions);
+                    continue;
+                }
+                else
+                {
+                    randomIndex = _random.Next(actions.Count);
+                    selectedAction = actions[randomIndex];
+                }
 
                 switch (selectedAction)
                 {
@@ -246,7 +259,6 @@ namespace Natak_Front_end.Agents
                     case ActionType.Roll_the_dice:
                         _currentGame = await _apiService.RollDice(gameId, (int)_currentGame.currentPlayerColour);
                         actions = new List<ActionType>(_currentGame.actions);
-                        actions.Add(ActionType.Buy_a_card);
                         break;
                     case ActionType.End_turn:
                         _currentGame = await _apiService.EndTurn(gameId, (int)_currentGame.currentPlayerColour);
@@ -393,40 +405,10 @@ namespace Natak_Front_end.Agents
                                         actions = new List<ActionType>(_currentGame.actions);
                                         break;
                                     case GrowthCardType.Roaming:
-                                        // ROAMING CARD IS BUGGED ON THE API END
-                                        /*currentGame = await _apiService.PlayRoamingCard(gameId, (int)currentGame.currentPlayerColour);
+/*                                      _currentGame = await _apiService.PlayRoamingCard(gameId, (int)_currentGame.currentPlayerColour);
                                         hasPlayedCard = true;
-
-                                        for(int i = 0; i < 2; i++)
-                                        {
-                                            await GetAvailableRoadLocations(gameId);
-                                            if (availableRoadLocations != null && availableRoadLocations.Count > 0)// && currentGame.player.remainingRoads > 0)
-                                            {
-                                                // Get a random index from the list
-                                                randomIndex = random.Next(availableRoadLocations.Count);
-                                                Road randomRoad = availableRoadLocations[randomIndex];
-
-                                                //System.Diagnostics.Debug.WriteLine($"Selected Point 1: X = {randomRoad.firstPoint.x}, Y = {randomRoad.firstPoint.y}");
-                                                //System.Diagnostics.Debug.WriteLine($"Selected Point 2: X = {randomRoad.secondPoint.x}, Y = {randomRoad.secondPoint.y}");
-                                                await BuildRoad(gameId, randomRoad.firstPoint, randomRoad.secondPoint);
-                                            }
-                                            else
-                                            {
-                                                actions.RemoveAt(randomIndex);
-                                                if (availableRoadLocations == null || availableRoadLocations.Count == 0)
-                                                {
-                                                    LogBuildAction(turns, player, "Road", false, "Location", availableRoadLocations.Count, currentGame.player.remainingRoads, "");
-                                                    System.Diagnostics.Debug.WriteLine($"No available road locations to select from.");
-                                                }
-                                                *//*else if (currentGame.player.remainingRoads == 0)
-                                                {
-                                                    LogBuildAction(turns, player, "Road", false, "Pieces", availableRoadLocations.Count, currentGame.player.remainingRoads, "");
-                                                    System.Diagnostics.Debug.WriteLine($"Player doesn't have any more road pieces.");
-                                                }*//*
-                                            }
-                                        }
-
-                                        actions = new List<ActionType>(currentGame.actions);*/
+                                        roamingCardPlayed = 2;*/
+                                        //actions = new List<ActionType>(_currentGame.actions);
                                         break;
                                     case GrowthCardType.Wealth:
                                         ResourceType[] allResourceTypes = Enum.GetValues(typeof(ResourceType))
