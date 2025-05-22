@@ -79,7 +79,7 @@ namespace Natak_Front_end.Agents
             _currentThiefLocation = thiefLocation;
 
             //  MCTS iterations - tune the number based on performance
-            int iterations = 20;
+            int iterations = 10;
             for (int i = 0; i < iterations; i++)
             {
                 // 1. Selection
@@ -88,7 +88,7 @@ namespace Natak_Front_end.Agents
                 // 2. Expansion
                 if (!node.IsTerminal() && node.VisitCount != 0)
                 {
-                    ExpandNode(node, gameController);
+                    await ExpandNode(node, gameController);
                     node = node.GetChild(_random.Next(node.Children.Count)); // Choose a child to simulate from
                 }
 
@@ -147,7 +147,7 @@ namespace Natak_Front_end.Agents
             return exploitation + exploration;
         }
 
-        private async void ExpandNode(MCTSNode node, GameController gameController)
+        private async Task ExpandNode(MCTSNode node, GameController gameController)
         {
             await _apiService.SaveLoad(_gameId, false);
             foreach (ActionType availableAction in node.State.actions)
@@ -173,7 +173,7 @@ namespace Natak_Front_end.Agents
                 }
             }
 
-            int maxTurns = 10;
+            int maxTurns = 5;
             double rolloutEvalStart = mctsStart - oppStart;
             
             for(int i = 0; i < maxTurns * _playerCount; i++)
@@ -270,6 +270,11 @@ namespace Natak_Front_end.Agents
                 {
                     selectedAction = action;
                     action = null;
+                }
+                else if (!actions.Any())
+                {
+                    actions = new List<ActionType>(_currentGame.actions);
+                    continue;
                 }
                 else
                 {
